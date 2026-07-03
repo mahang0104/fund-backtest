@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>银河行业混合A (519670) - 月末购买回测</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --text: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --accent: #3b82f6;
+            --accent2: #10b981;
+            --danger: #ef4444;
+            --border: #334155;
+            --hover: #2563eb;
+        }
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+        
+        header {
+            text-align: center;
+            padding: 40px 0 20px;
+        }
+        
+        header h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #60a5fa, #34d399);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 8px;
+        }
+        
+        header p {
+            color: var(--text-secondary);
+            font-size: 1.05rem;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin: 24px 0;
+        }
+        
+        .stat-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        }
+        
+        .stat-card .label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+        
+        .stat-card .value {
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+        
+        .stat-card .sub {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+        
+        .positive { color: var(--accent2); }
+        .negative { color: var(--danger); }
+        
+        .chart-section {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            margin: 24px 0;
+        }
+        
+        .chart-section h3 {
+            font-size: 1.15rem;
+            margin-bottom: 16px;
+            color: var(--text);
+        }
+        
+        .chart-container {
+            width: 100%;
+            height: 500px;
+        }
+        
+        .table-section {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            margin: 24px 0;
+            overflow: hidden;
+        }
+        
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        
+        .table-header h3 {
+            font-size: 1.15rem;
+        }
+        
+        .search-input {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 8px 16px;
+            color: var(--text);
+            font-size: 0.9rem;
+            width: 200px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        
+        .search-input:focus {
+            border-color: var(--accent);
+        }
+        
+        .table-wrapper {
+            overflow-x: auto;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+        
+        thead {
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+        
+        th {
+            background: var(--bg);
+            color: var(--text-secondary);
+            font-weight: 600;
+            padding: 12px 16px;
+            text-align: center;
+            border-bottom: 2px solid var(--border);
+            white-space: nowrap;
+        }
+        
+        td {
+            padding: 10px 16px;
+            text-align: center;
+            border-bottom: 1px solid var(--border);
+            white-space: nowrap;
+        }
+        
+        tbody tr {
+            transition: background 0.15s;
+        }
+        
+        tbody tr:hover {
+            background: rgba(59, 130, 246, 0.1);
+        }
+        
+        .return-badge {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+        
+        .return-high { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+        .return-mid { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
+        .return-low { background: rgba(251, 191, 36, 0.15); color: #fbbf24; }
+        .return-neg { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+        
+        .info-box {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 10px;
+            padding: 16px 20px;
+            margin: 16px 0;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            line-height: 1.8;
+        }
+        
+        .info-box strong {
+            color: var(--text);
+        }
+        
+        .top10 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin: 24px 0;
+        }
+        
+        @media (max-width: 768px) {
+            .top10 { grid-template-columns: 1fr; }
+            .container { padding: 12px; }
+            header h1 { font-size: 1.5rem; }
+        }
+        
+        .rank-list {
+            list-style: none;
+        }
+        
+        .rank-list li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 16px;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.9rem;
+        }
+        
+        .rank-list li:last-child {
+            border-bottom: none;
+        }
+        
+        .rank-num {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.8rem;
+            margin-right: 8px;
+            flex-shrink: 0;
+        }
+        
+        .rank-gold { background: rgba(251, 191, 36, 0.2); color: #fbbf24; }
+        .rank-silver { background: rgba(148, 163, 184, 0.2); color: #94a3b8; }
+        .rank-bronze { background: rgba(180, 130, 90, 0.2); color: #cd853f; }
+        .rank-normal { background: rgba(51, 65, 85, 0.5); color: var(--text-secondary); }
+        
+        .rank-item-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 40px 0;
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+        }
+        
+        footer a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📊 银河行业混合A (519670)</h1>
+            <p>月末购买回测 · 2010年12月 — 2026年6月30日 · 分红再投资</p>
+        </header>
+        
+        <div class="stats-grid" id="statsGrid"></div>
+        
+        <div class="chart-section">
+            <h3>📈 各月买入累计收益率走势（% ）</h3>
+            <div class="chart-container" id="returnChart"></div>
+        </div>
+        
+        <div class="info-box">
+            <strong>📐 回测说明：</strong><br>
+            ① 假设在每月最后一个交易日按<strong>单位净值</strong>买入1份（不含申购费）<br>
+            ② 持有期间所有<strong>现金分红</strong>均按分红日当天净值再投资（买入更多份额）<br>
+            ③ 计算到2026年6月30日的累计总收益率和年化收益率(CAGR)<br>
+            ④ 历史分红共8次：2010年0.15元、2011年0.21元、2014年0.14元、2015年0.155元、2016年0.87元、2020年0.33元、2021年0.566元、2022年0.392元
+        </div>
+        
+        <div class="top10">
+            <div class="chart-section" style="margin: 0;">
+                <h3>🏆 最佳买入月份 TOP10</h3>
+                <ul class="rank-list" id="top10List"></ul>
+            </div>
+            <div class="chart-section" style="margin: 0;">
+                <h3>📉 最差买入月份 TOP10</h3>
+                <ul class="rank-list" id="bottom10List"></ul>
+            </div>
+        </div>
+        
+        <div class="table-section">
+            <div class="table-header">
+                <h3>📋 完整回测数据（共 <span id="totalCount">0</span> 个月）</h3>
+                <input type="text" class="search-input" id="searchInput" placeholder="🔍 搜索年份或月份...">
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>年份</th>
+                            <th>月份</th>
+                            <th>买入日期</th>
+                            <th>买入净值</th>
+                            <th>最终份额</th>
+                            <th>累计收益率</th>
+                            <th>年化收益率</th>
+                            <th>持有年限</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+            </div>
+        </div>
+        
+        <footer>
+            <p>数据来源：<a href="https://fund.eastmoney.com/519670.html" target="_blank">天天基金网</a> · 分红数据为公开记录 · 回测仅为历史数据展示，不构成投资建议</p>
+        </footer>
+    </div>
+    
+    <script>
+        // Backtest data embedded
+        const BACKTEST_DATA = {"fundCode": "519670", "fundName": "银河行业混合A", "endDate": "2026-06-30", "endNAV": 1.589, "totalMonths": 187, "profitMonths": 186, "results": [{"yearMonth": "2010-12", "buyDate": "2010-12-31", "buyNAV": 1.422, "endNAV": 1.589, "shares": 4.860729, "totalReturn": 443.16, "cagr": 11.54, "years": 15.5, "isProfit": true}, {"yearMonth": "2011-01", "buyDate": "2011-01-31", "buyNAV": 1.128, "endNAV": 1.589, "shares": 4.10124, "totalReturn": 477.74, "cagr": 12.05, "years": 15.41, "isProfit": true}, {"yearMonth": "2011-02", "buyDate": "2011-02-28", "buyNAV": 1.203, "endNAV": 1.589, "shares": 4.10124, "totalReturn": 441.72, "cagr": 11.65, "years": 15.33, "isProfit": true}, {"yearMonth": "2011-03", "buyDate": "2011-03-31", "buyNAV": 1.147, "endNAV": 1.589, "shares": 4.10124, "totalReturn": 468.17, "cagr": 12.07, "years": 15.25, "isProfit": true}, {"yearMonth": "2011-04", "buyDate": "2011-04-29", "buyNAV": 1.084, "endNAV": 1.589, "shares": 4.10124, "totalReturn": 501.19, "cagr": 12.55, "years": 15.17, "isProfit": true}, {"yearMonth": "2011-05", "buyDate": "2011-05-31", "buyNAV": 1.021, "endNAV": 1.589, "shares": 4.10124, "totalReturn": 538.28, "cagr": 13.08, "years": 15.08, "isProfit": true}, {"yearMonth": "2011-06", "buyDate": "2011-06-30", "buyNAV": 1.055, "endNAV": 1.589, "shares": 4.10124, "totalReturn": 517.71, "cagr": 12.91, "years": 15.0, "isProfit": true}, {"yearMonth": "2011-07", "buyDate": "2011-07-29", "buyNAV": 1.095, "endNAV": 1.589, "shares": 4.10124, "totalReturn": 495.15, "cagr": 12.7, "years": 14.92, "isProfit": true}, {"yearMonth": "2011-08", "buyDate": "2011-08-31", "buyNAV": 1.098, "endNAV": 1.589, "shares": 4.10124, "totalReturn": 493.52, "cagr": 12.76, "years": 14.83, "isProfit": true}, {"yearMonth": "2011-09", "buyDate": "2011-09-30", "buyNAV": 0.994, "endNAV": 1.589, "shares": 4.10124, "totalReturn": 555.62, "cagr": 13.6, "years": 14.75, "isProfit": true}, {"yearMonth": "2011-10", "buyDate": "2011-10-31", "buyNAV": 1.022, "endNAV": 1.589, "shares": 4.10124, "totalReturn": 537.66, "cagr": 13.47, "years": 14.66, "isProfit": true}, {"yearMonth": "2011-11", "buyDate": "2011-11-30", "buyNAV": 1.035, "endNAV": 1.589, "shares": 4.10124, "totalReturn": 529.65, "cagr": 13.45, "years": 14.58, "isProfit": true}, {"yearMonth": "2011-12", "buyDate": "2011-12-31", "buyNAV": 0.957, "endNAV": 1.589, "shares": 4.10124, "totalReturn": 580.97, "cagr": 14.15, "years": 14.5, "isProfit": true}, {"yearMonth": "2012-01", "buyDate": "2012-01-31", "buyNAV": 0.879, "endNAV": 1.589, "shares": 4.10124, "totalReturn": 641.4, "cagr": 14.91, "years": 14.41, "isProfit": true}, {"yearMonth": "2012-02", "buyDate": "2012-02-29", "buyNAV": 0.969, "endNAV": 1.589, "shares": 4.10124, "totalReturn": 572.54, "cagr": 14.22, "years": 14.33, "isProfit": true}, {"yearMonth": "2012-03", "buyDate": "2012-03-31", "buyNAV": 0.932, "endNAV": 1.589, "shares": 4.10124, "totalReturn": 599.23, "cagr": 14.63, "years": 14.25, "isProfit": true}, {"yearMonth": "2012-04", "buyDate": "2012-04-27", "buyNAV": 0.974, "endNAV": 1.589, "shares": 4.10124, "totalReturn": 569.08, "cagr": 14.35, "years": 14.17, "isProfit": true}, {"yearMonth": "2012-05", "buyDate": "2012-05-31", "buyNAV": 0.99, "endNAV": 1.589, "shares": 4.10124, "totalReturn": 558.27, "cagr": 14.32, "years": 14.08, "isProfit": true}, {"yearMonth": "2012-06", "buyDate": "2012-06-30", "buyNAV": 0.993, "endNAV": 1.589, "shares": 4.10124, "totalReturn": 556.28, "cagr": 14.39, "years": 14.0, "isProfit": true}, {"yearMonth": "2012-07", "buyDate": "2012-07-31", "buyNAV": 0.94, "endNAV": 1.589, "shares": 4.10124, "totalReturn": 593.28, "cagr": 14.93, "years": 13.91, "isProfit": true}, {"yearMonth": "2012-08", "buyDate": "2012-08-31", "buyNAV": 0.936, "endNAV": 1.589, "shares": 4.10124, "totalReturn": 596.25, "cagr": 15.06, "years": 13.83, "isProfit": true}, {"yearMonth": "2012-09", "buyDate": "2012-09-30", "buyNAV": 0.956, "endNAV": 1.589, "shares": 4.10124, "totalReturn": 581.68, "cagr": 14.98, "years": 13.75, "isProfit": true}, {"yearMonth": "2012-10", "buyDate": "2012-10-31", "buyNAV": 0.941, "endNAV": 1.589, "shares": 4.10124, "totalReturn": 592.55, "cagr": 15.22, "years": 13.66, "isProfit": true}, {"yearMonth": "2012-11", "buyDate": "2012-11-30", "buyNAV": 0.871, "endNAV": 1.589, "shares": 4.10124, "totalReturn": 648.21, "cagr": 15.97, "years": 13.58, "isProfit": true}, {"yearMonth": "2012-12", "buyDate": "2012-12-31", "buyNAV": 0.986, "endNAV": 1.589, "shares": 4.10124, "totalReturn": 560.94, "cagr": 15.02, "years": 13.49, "isProfit": true}, {"yearMonth": "2013-01", "buyDate": "2013-01-31", "buyNAV": 1.041, "endNAV": 1.589, "shares": 4.10124, "totalReturn": 526.02, "cagr": 14.66, "years": 13.41, "isProfit": true}, {"yearMonth": "2013-02", "buyDate": "2013-02-28", "buyNAV": 1.076, "endNAV": 1.589, "shares": 4.10124, "totalReturn": 505.66, "cagr": 14.46, "years": 13.33, "isProfit": true}, {"yearMonth": "2013-03", "buyDate": "2013-03-29", "buyNAV": 1.077, "endNAV": 1.589, "shares": 4.10124, "totalReturn": 505.09, "cagr": 14.55, "years": 13.25, "isProfit": true}, {"yearMonth": "2013-04", "buyDate": "2013-04-26", "buyNAV": 1.061, "endNAV": 1.589, "shares": 4.10124, "totalReturn": 514.22, "cagr": 14.77, "years": 13.18, "isProfit": true}, {"yearMonth": "2013-05", "buyDate": "2013-05-31", "buyNAV": 1.265, "endNAV": 1.589, "shares": 4.10124, "totalReturn": 415.17, "cagr": 13.35, "years": 13.08, "isProfit": true}, {"yearMonth": "2013-06", "buyDate": "2013-06-30", "buyNAV": 1.158, "endNAV": 1.589, "shares": 4.10124, "totalReturn": 462.77, "cagr": 14.21, "years": 13.0, "isProfit": true}, {"yearMonth": "2013-07", "buyDate": "2013-07-31", "buyNAV": 1.366, "endNAV": 1.589, "shares": 4.10124, "totalReturn": 377.08, "cagr": 12.86, "years": 12.91, "isProfit": true}, {"yearMonth": "2013-08", "buyDate": "2013-08-30", "buyNAV": 1.365, "endNAV": 1.589, "shares": 4.10124, "totalReturn": 377.43, "cagr": 12.96, "years": 12.83, "isProfit": true}, {"yearMonth": "2013-09", "buyDate": "2013-09-30", "buyNAV": 1.524, "endNAV": 1.589, "shares": 4.10124, "totalReturn": 327.62, "cagr": 12.07, "years": 12.75, "isProfit": true}, {"yearMonth": "2013-10", "buyDate": "2013-10-31", "buyNAV": 1.405, "endNAV": 1.589, "shares": 4.10124, "totalReturn": 363.83, "cagr": 12.88, "years": 12.66, "isProfit": true}, {"yearMonth": "2013-11", "buyDate": "2013-11-29", "buyNAV": 1.538, "endNAV": 1.589, "shares": 4.10124, "totalReturn": 323.72, "cagr": 12.16, "years": 12.58, "isProfit": true}, {"yearMonth": "2013-12", "buyDate": "2013-12-31", "buyNAV": 1.517, "endNAV": 1.589, "shares": 4.10124, "totalReturn": 329.59, "cagr": 12.37, "years": 12.5, "isProfit": true}, {"yearMonth": "2014-01", "buyDate": "2014-01-30", "buyNAV": 1.75, "endNAV": 1.589, "shares": 4.10124, "totalReturn": 272.39, "cagr": 11.17, "years": 12.41, "isProfit": true}, {"yearMonth": "2014-02", "buyDate": "2014-02-28", "buyNAV": 1.71, "endNAV": 1.589, "shares": 3.794031, "totalReturn": 252.56, "cagr": 10.76, "years": 12.33, "isProfit": true}, {"yearMonth": "2014-03", "buyDate": "2014-03-31", "buyNAV": 1.573, "endNAV": 1.589, "shares": 3.794031, "totalReturn": 283.26, "cagr": 11.59, "years": 12.25, "isProfit": true}, {"yearMonth": "2014-04", "buyDate": "2014-04-30", "buyNAV": 1.462, "endNAV": 1.589, "shares": 3.794031, "totalReturn": 312.36, "cagr": 12.35, "years": 12.17, "isProfit": true}, {"yearMonth": "2014-05", "buyDate": "2014-05-30", "buyNAV": 1.509, "endNAV": 1.589, "shares": 3.794031, "totalReturn": 299.52, "cagr": 12.14, "years": 12.08, "isProfit": true}, {"yearMonth": "2014-06", "buyDate": "2014-06-30", "buyNAV": 1.595, "endNAV": 1.589, "shares": 3.794031, "totalReturn": 277.98, "cagr": 11.72, "years": 12.0, "isProfit": true}, {"yearMonth": "2014-07", "buyDate": "2014-07-31", "buyNAV": 1.586, "endNAV": 1.589, "shares": 3.794031, "totalReturn": 280.12, "cagr": 11.86, "years": 11.92, "isProfit": true}, {"yearMonth": "2014-08", "buyDate": "2014-08-29", "buyNAV": 1.682, "endNAV": 1.589, "shares": 3.794031, "totalReturn": 258.43, "cagr": 11.39, "years": 11.84, "isProfit": true}, {"yearMonth": "2014-09", "buyDate": "2014-09-30", "buyNAV": 1.823, "endNAV": 1.589, "shares": 3.794031, "totalReturn": 230.7, "cagr": 10.72, "years": 11.75, "isProfit": true}, {"yearMonth": "2014-10", "buyDate": "2014-10-31", "buyNAV": 1.846, "endNAV": 1.589, "shares": 3.794031, "totalReturn": 226.58, "cagr": 10.68, "years": 11.66, "isProfit": true}, {"yearMonth": "2014-11", "buyDate": "2014-11-28", "buyNAV": 1.922, "endNAV": 1.589, "shares": 3.794031, "totalReturn": 213.67, "cagr": 10.37, "years": 11.59, "isProfit": true}, {"yearMonth": "2014-12", "buyDate": "2014-12-31", "buyNAV": 1.831, "endNAV": 1.589, "shares": 3.794031, "totalReturn": 229.26, "cagr": 10.92, "years": 11.5, "isProfit": true}, {"yearMonth": "2015-01", "buyDate": "2015-01-30", "buyNAV": 2.027, "endNAV": 1.589, "shares": 3.523029, "totalReturn": 176.18, "cagr": 9.31, "years": 11.41, "isProfit": true}, {"yearMonth": "2015-02", "buyDate": "2015-02-27", "buyNAV": 2.285, "endNAV": 1.589, "shares": 3.523029, "totalReturn": 144.99, "cagr": 8.22, "years": 11.34, "isProfit": true}, {"yearMonth": "2015-03", "buyDate": "2015-03-31", "buyNAV": 2.768, "endNAV": 1.589, "shares": 3.523029, "totalReturn": 102.24, "cagr": 6.46, "years": 11.25, "isProfit": true}, {"yearMonth": "2015-04", "buyDate": "2015-04-30", "buyNAV": 3.111, "endNAV": 1.589, "shares": 3.523029, "totalReturn": 79.95, "cagr": 5.4, "years": 11.17, "isProfit": true}, {"yearMonth": "2015-05", "buyDate": "2015-05-29", "buyNAV": 3.922, "endNAV": 1.589, "shares": 3.523029, "totalReturn": 42.74, "cagr": 3.26, "years": 11.09, "isProfit": true}, {"yearMonth": "2015-06", "buyDate": "2015-06-30", "buyNAV": 3.116, "endNAV": 1.589, "shares": 3.523029, "totalReturn": 79.66, "cagr": 5.47, "years": 11.0, "isProfit": true}, {"yearMonth": "2015-07", "buyDate": "2015-07-31", "buyNAV": 2.383, "endNAV": 1.589, "shares": 3.523029, "totalReturn": 134.92, "cagr": 8.14, "years": 10.92, "isProfit": true}, {"yearMonth": "2015-08", "buyDate": "2015-08-31", "buyNAV": 1.99, "endNAV": 1.589, "shares": 3.523029, "totalReturn": 181.31, "cagr": 10.02, "years": 10.83, "isProfit": true}, {"yearMonth": "2015-09", "buyDate": "2015-09-30", "buyNAV": 2.121, "endNAV": 1.589, "shares": 3.523029, "totalReturn": 163.94, "cagr": 9.45, "years": 10.75, "isProfit": true}, {"yearMonth": "2015-10", "buyDate": "2015-10-30", "buyNAV": 2.466, "endNAV": 1.589, "shares": 3.523029, "totalReturn": 127.01, "cagr": 7.99, "years": 10.67, "isProfit": true}, {"yearMonth": "2015-11", "buyDate": "2015-11-30", "buyNAV": 2.646, "endNAV": 1.589, "shares": 3.523029, "totalReturn": 111.57, "cagr": 7.34, "years": 10.58, "isProfit": true}, {"yearMonth": "2015-12", "buyDate": "2015-12-31", "buyNAV": 2.767, "endNAV": 1.589, "shares": 3.523029, "totalReturn": 102.32, "cagr": 6.94, "years": 10.5, "isProfit": true}, {"yearMonth": "2016-01", "buyDate": "2016-01-29", "buyNAV": 1.235, "endNAV": 1.589, "shares": 2.15532, "totalReturn": 177.31, "cagr": 10.29, "years": 10.42, "isProfit": true}, {"yearMonth": "2016-02", "buyDate": "2016-02-29", "buyNAV": 1.185, "endNAV": 1.589, "shares": 2.15532, "totalReturn": 189.01, "cagr": 10.82, "years": 10.33, "isProfit": true}, {"yearMonth": "2016-03", "buyDate": "2016-03-31", "buyNAV": 1.344, "endNAV": 1.589, "shares": 2.15532, "totalReturn": 154.82, "cagr": 9.56, "years": 10.25, "isProfit": true}, {"yearMonth": "2016-04", "buyDate": "2016-04-29", "buyNAV": 1.346, "endNAV": 1.589, "shares": 2.15532, "totalReturn": 154.44, "cagr": 9.62, "years": 10.17, "isProfit": true}, {"yearMonth": "2016-05", "buyDate": "2016-05-31", "buyNAV": 1.346, "endNAV": 1.589, "shares": 2.15532, "totalReturn": 154.44, "cagr": 9.71, "years": 10.08, "isProfit": true}, {"yearMonth": "2016-06", "buyDate": "2016-06-30", "buyNAV": 1.424, "endNAV": 1.589, "shares": 2.15532, "totalReturn": 140.51, "cagr": 9.17, "years": 10.0, "isProfit": true}, {"yearMonth": "2016-07", "buyDate": "2016-07-29", "buyNAV": 1.412, "endNAV": 1.589, "shares": 2.15532, "totalReturn": 142.55, "cagr": 9.34, "years": 9.92, "isProfit": true}, {"yearMonth": "2016-08", "buyDate": "2016-08-31", "buyNAV": 1.464, "endNAV": 1.589, "shares": 2.15532, "totalReturn": 133.93, "cagr": 9.03, "years": 9.83, "isProfit": true}, {"yearMonth": "2016-09", "buyDate": "2016-09-30", "buyNAV": 1.477, "endNAV": 1.589, "shares": 2.15532, "totalReturn": 131.88, "cagr": 9.01, "years": 9.75, "isProfit": true}, {"yearMonth": "2016-10", "buyDate": "2016-10-31", "buyNAV": 1.493, "endNAV": 1.589, "shares": 2.15532, "totalReturn": 129.39, "cagr": 8.97, "years": 9.66, "isProfit": true}, {"yearMonth": "2016-11", "buyDate": "2016-11-30", "buyNAV": 1.495, "endNAV": 1.589, "shares": 2.15532, "totalReturn": 129.08, "cagr": 9.04, "years": 9.58, "isProfit": true}, {"yearMonth": "2016-12", "buyDate": "2016-12-31", "buyNAV": 1.396, "endNAV": 1.589, "shares": 2.15532, "totalReturn": 145.33, "cagr": 9.91, "years": 9.49, "isProfit": true}, {"yearMonth": "2017-01", "buyDate": "2017-01-26", "buyNAV": 1.369, "endNAV": 1.589, "shares": 2.15532, "totalReturn": 150.17, "cagr": 10.22, "years": 9.42, "isProfit": true}, {"yearMonth": "2017-02", "buyDate": "2017-02-28", "buyNAV": 1.388, "endNAV": 1.589, "shares": 2.15532, "totalReturn": 146.74, "cagr": 10.16, "years": 9.33, "isProfit": true}, {"yearMonth": "2017-03", "buyDate": "2017-03-31", "buyNAV": 1.429, "endNAV": 1.589, "shares": 2.15532, "totalReturn": 139.66, "cagr": 9.91, "years": 9.25, "isProfit": true}, {"yearMonth": "2017-04", "buyDate": "2017-04-28", "buyNAV": 1.394, "endNAV": 1.589, "shares": 2.15532, "totalReturn": 145.68, "cagr": 10.3, "years": 9.17, "isProfit": true}, {"yearMonth": "2017-05", "buyDate": "2017-05-31", "buyNAV": 1.325, "endNAV": 1.589, "shares": 2.15532, "totalReturn": 158.48, "cagr": 11.02, "years": 9.08, "isProfit": true}, {"yearMonth": "2017-06", "buyDate": "2017-06-30", "buyNAV": 1.411, "endNAV": 1.589, "shares": 2.15532, "totalReturn": 142.72, "cagr": 10.36, "years": 9.0, "isProfit": true}, {"yearMonth": "2017-07", "buyDate": "2017-07-31", "buyNAV": 1.377, "endNAV": 1.589, "shares": 2.15532, "totalReturn": 148.71, "cagr": 10.76, "years": 8.91, "isProfit": true}, {"yearMonth": "2017-08", "buyDate": "2017-08-31", "buyNAV": 1.391, "endNAV": 1.589, "shares": 2.15532, "totalReturn": 146.21, "cagr": 10.74, "years": 8.83, "isProfit": true}, {"yearMonth": "2017-09", "buyDate": "2017-09-29", "buyNAV": 1.471, "endNAV": 1.589, "shares": 2.15532, "totalReturn": 132.82, "cagr": 10.14, "years": 8.75, "isProfit": true}, {"yearMonth": "2017-10", "buyDate": "2017-10-31", "buyNAV": 1.542, "endNAV": 1.589, "shares": 2.15532, "totalReturn": 122.1, "cagr": 9.65, "years": 8.66, "isProfit": true}, {"yearMonth": "2017-11", "buyDate": "2017-11-30", "buyNAV": 1.449, "endNAV": 1.589, "shares": 2.15532, "totalReturn": 136.36, "cagr": 10.54, "years": 8.58, "isProfit": true}, {"yearMonth": "2017-12", "buyDate": "2017-12-31", "buyNAV": 1.514, "endNAV": 1.589, "shares": 2.15532, "totalReturn": 126.21, "cagr": 10.09, "years": 8.5, "isProfit": true}, {"yearMonth": "2018-01", "buyDate": "2018-01-31", "buyNAV": 1.512, "endNAV": 1.589, "shares": 2.15532, "totalReturn": 126.51, "cagr": 10.21, "years": 8.41, "isProfit": true}, {"yearMonth": "2018-02", "buyDate": "2018-02-28", "buyNAV": 1.476, "endNAV": 1.589, "shares": 2.15532, "totalReturn": 132.03, "cagr": 10.63, "years": 8.33, "isProfit": true}, {"yearMonth": "2018-03", "buyDate": "2018-03-30", "buyNAV": 1.478, "endNAV": 1.589, "shares": 2.15532, "totalReturn": 131.72, "cagr": 10.72, "years": 8.25, "isProfit": true}, {"yearMonth": "2018-04", "buyDate": "2018-04-27", "buyNAV": 1.411, "endNAV": 1.589, "shares": 2.15532, "totalReturn": 142.72, "cagr": 11.46, "years": 8.18, "isProfit": true}, {"yearMonth": "2018-05", "buyDate": "2018-05-31", "buyNAV": 1.463, "endNAV": 1.589, "shares": 2.15532, "totalReturn": 134.09, "cagr": 11.1, "years": 8.08, "isProfit": true}, {"yearMonth": "2018-06", "buyDate": "2018-06-30", "buyNAV": 1.371, "endNAV": 1.589, "shares": 2.15532, "totalReturn": 149.8, "cagr": 12.12, "years": 8.0, "isProfit": true}, {"yearMonth": "2018-07", "buyDate": "2018-07-31", "buyNAV": 1.31, "endNAV": 1.589, "shares": 2.15532, "totalReturn": 161.44, "cagr": 12.91, "years": 7.92, "isProfit": true}, {"yearMonth": "2018-08", "buyDate": "2018-08-31", "buyNAV": 1.223, "endNAV": 1.589, "shares": 2.15532, "totalReturn": 180.03, "cagr": 14.05, "years": 7.83, "isProfit": true}, {"yearMonth": "2018-09", "buyDate": "2018-09-28", "buyNAV": 1.211, "endNAV": 1.589, "shares": 2.15532, "totalReturn": 182.81, "cagr": 14.35, "years": 7.75, "isProfit": true}, {"yearMonth": "2018-10", "buyDate": "2018-10-31", "buyNAV": 1.109, "endNAV": 1.589, "shares": 2.15532, "totalReturn": 208.82, "cagr": 15.85, "years": 7.66, "isProfit": true}, {"yearMonth": "2018-11", "buyDate": "2018-11-30", "buyNAV": 1.116, "endNAV": 1.589, "shares": 2.15532, "totalReturn": 206.88, "cagr": 15.94, "years": 7.58, "isProfit": true}, {"yearMonth": "2018-12", "buyDate": "2018-12-31", "buyNAV": 1.07, "endNAV": 1.589, "shares": 2.15532, "totalReturn": 220.08, "cagr": 16.79, "years": 7.5, "isProfit": true}, {"yearMonth": "2019-01", "buyDate": "2019-01-31", "buyNAV": 1.101, "endNAV": 1.589, "shares": 2.15532, "totalReturn": 211.06, "cagr": 16.55, "years": 7.41, "isProfit": true}, {"yearMonth": "2019-02", "buyDate": "2019-02-28", "buyNAV": 1.223, "endNAV": 1.589, "shares": 2.15532, "totalReturn": 180.03, "cagr": 15.07, "years": 7.33, "isProfit": true}, {"yearMonth": "2019-03", "buyDate": "2019-03-29", "buyNAV": 1.296, "endNAV": 1.589, "shares": 2.15532, "totalReturn": 164.26, "cagr": 14.33, "years": 7.26, "isProfit": true}, {"yearMonth": "2019-04", "buyDate": "2019-04-30", "buyNAV": 1.284, "endNAV": 1.589, "shares": 2.15532, "totalReturn": 166.73, "cagr": 14.67, "years": 7.17, "isProfit": true}, {"yearMonth": "2019-05", "buyDate": "2019-05-31", "buyNAV": 1.235, "endNAV": 1.589, "shares": 2.15532, "totalReturn": 177.31, "cagr": 15.49, "years": 7.08, "isProfit": true}, {"yearMonth": "2019-06", "buyDate": "2019-06-30", "buyNAV": 1.318, "endNAV": 1.589, "shares": 2.15532, "totalReturn": 159.85, "cagr": 14.61, "years": 7.0, "isProfit": true}, {"yearMonth": "2019-07", "buyDate": "2019-07-31", "buyNAV": 1.347, "endNAV": 1.589, "shares": 2.15532, "totalReturn": 154.25, "cagr": 14.45, "years": 6.92, "isProfit": true}, {"yearMonth": "2019-08", "buyDate": "2019-08-30", "buyNAV": 1.524, "endNAV": 1.589, "shares": 2.15532, "totalReturn": 124.72, "cagr": 12.58, "years": 6.83, "isProfit": true}, {"yearMonth": "2019-09", "buyDate": "2019-09-30", "buyNAV": 1.579, "endNAV": 1.589, "shares": 2.15532, "totalReturn": 116.9, "cagr": 12.16, "years": 6.75, "isProfit": true}, {"yearMonth": "2019-10", "buyDate": "2019-10-31", "buyNAV": 1.63, "endNAV": 1.589, "shares": 2.15532, "totalReturn": 110.11, "cagr": 11.79, "years": 6.66, "isProfit": true}, {"yearMonth": "2019-11", "buyDate": "2019-11-29", "buyNAV": 1.576, "endNAV": 1.589, "shares": 2.15532, "totalReturn": 117.31, "cagr": 12.51, "years": 6.58, "isProfit": true}, {"yearMonth": "2019-12", "buyDate": "2019-12-31", "buyNAV": 1.65, "endNAV": 1.589, "shares": 2.15532, "totalReturn": 107.56, "cagr": 11.9, "years": 6.5, "isProfit": true}, {"yearMonth": "2020-01", "buyDate": "2020-01-23", "buyNAV": 1.536, "endNAV": 1.589, "shares": 1.750968, "totalReturn": 81.14, "cagr": 9.67, "years": 6.43, "isProfit": true}, {"yearMonth": "2020-02", "buyDate": "2020-02-28", "buyNAV": 1.598, "endNAV": 1.589, "shares": 1.750968, "totalReturn": 74.11, "cagr": 9.15, "years": 6.34, "isProfit": true}, {"yearMonth": "2020-03", "buyDate": "2020-03-31", "buyNAV": 1.38, "endNAV": 1.589, "shares": 1.750968, "totalReturn": 101.62, "cagr": 11.88, "years": 6.25, "isProfit": true}, {"yearMonth": "2020-04", "buyDate": "2020-04-30", "buyNAV": 1.629, "endNAV": 1.589, "shares": 1.750968, "totalReturn": 70.8, "cagr": 9.07, "years": 6.17, "isProfit": true}, {"yearMonth": "2020-05", "buyDate": "2020-05-29", "buyNAV": 1.722, "endNAV": 1.589, "shares": 1.750968, "totalReturn": 61.57, "cagr": 8.2, "years": 6.09, "isProfit": true}, {"yearMonth": "2020-06", "buyDate": "2020-06-30", "buyNAV": 2.062, "endNAV": 1.589, "shares": 1.750968, "totalReturn": 34.93, "cagr": 5.12, "years": 6.0, "isProfit": true}, {"yearMonth": "2020-07", "buyDate": "2020-07-31", "buyNAV": 2.389, "endNAV": 1.589, "shares": 1.750968, "totalReturn": 16.46, "cagr": 2.61, "years": 5.91, "isProfit": true}, {"yearMonth": "2020-08", "buyDate": "2020-08-31", "buyNAV": 2.255, "endNAV": 1.589, "shares": 1.750968, "totalReturn": 23.38, "cagr": 3.67, "years": 5.83, "isProfit": true}, {"yearMonth": "2020-09", "buyDate": "2020-09-30", "buyNAV": 2.149, "endNAV": 1.589, "shares": 1.750968, "totalReturn": 29.47, "cagr": 4.6, "years": 5.75, "isProfit": true}, {"yearMonth": "2020-10", "buyDate": "2020-10-30", "buyNAV": 2.281, "endNAV": 1.589, "shares": 1.750968, "totalReturn": 21.98, "cagr": 3.57, "years": 5.66, "isProfit": true}, {"yearMonth": "2020-11", "buyDate": "2020-11-30", "buyNAV": 2.084, "endNAV": 1.589, "shares": 1.750968, "totalReturn": 33.51, "cagr": 5.32, "years": 5.58, "isProfit": true}, {"yearMonth": "2020-12", "buyDate": "2020-12-31", "buyNAV": 2.35, "endNAV": 1.589, "shares": 1.750968, "totalReturn": 18.4, "cagr": 3.12, "years": 5.49, "isProfit": true}, {"yearMonth": "2021-01", "buyDate": "2021-01-29", "buyNAV": 1.952, "endNAV": 1.589, "shares": 1.358318, "totalReturn": 10.57, "cagr": 1.87, "years": 5.42, "isProfit": true}, {"yearMonth": "2021-02", "buyDate": "2021-02-26", "buyNAV": 1.81, "endNAV": 1.589, "shares": 1.358318, "totalReturn": 19.25, "cagr": 3.35, "years": 5.34, "isProfit": true}, {"yearMonth": "2021-03", "buyDate": "2021-03-31", "buyNAV": 1.691, "endNAV": 1.589, "shares": 1.358318, "totalReturn": 27.64, "cagr": 4.76, "years": 5.25, "isProfit": true}, {"yearMonth": "2021-04", "buyDate": "2021-04-30", "buyNAV": 1.91, "endNAV": 1.589, "shares": 1.358318, "totalReturn": 13.0, "cagr": 2.39, "years": 5.17, "isProfit": true}, {"yearMonth": "2021-05", "buyDate": "2021-05-31", "buyNAV": 1.986, "endNAV": 1.589, "shares": 1.358318, "totalReturn": 8.68, "cagr": 1.65, "years": 5.08, "isProfit": true}, {"yearMonth": "2021-06", "buyDate": "2021-06-30", "buyNAV": 2.095, "endNAV": 1.589, "shares": 1.358318, "totalReturn": 3.02, "cagr": 0.6, "years": 5.0, "isProfit": true}, {"yearMonth": "2021-07", "buyDate": "2021-07-30", "buyNAV": 1.97, "endNAV": 1.589, "shares": 1.358318, "totalReturn": 9.56, "cagr": 1.87, "years": 4.92, "isProfit": true}, {"yearMonth": "2021-08", "buyDate": "2021-08-31", "buyNAV": 1.846, "endNAV": 1.589, "shares": 1.358318, "totalReturn": 16.92, "cagr": 3.29, "years": 4.83, "isProfit": true}, {"yearMonth": "2021-09", "buyDate": "2021-09-30", "buyNAV": 1.913, "endNAV": 1.589, "shares": 1.358318, "totalReturn": 12.83, "cagr": 2.57, "years": 4.75, "isProfit": true}, {"yearMonth": "2021-10", "buyDate": "2021-10-29", "buyNAV": 1.851, "endNAV": 1.589, "shares": 1.358318, "totalReturn": 16.61, "cagr": 3.35, "years": 4.67, "isProfit": true}, {"yearMonth": "2021-11", "buyDate": "2021-11-30", "buyNAV": 1.881, "endNAV": 1.589, "shares": 1.358318, "totalReturn": 14.75, "cagr": 3.05, "years": 4.58, "isProfit": true}, {"yearMonth": "2021-12", "buyDate": "2021-12-31", "buyNAV": 1.773, "endNAV": 1.589, "shares": 1.358318, "totalReturn": 21.74, "cagr": 4.47, "years": 4.5, "isProfit": true}, {"yearMonth": "2022-01", "buyDate": "2022-01-28", "buyNAV": 1.508, "endNAV": 1.589, "shares": 1.358318, "totalReturn": 43.13, "cagr": 8.45, "years": 4.42, "isProfit": true}, {"yearMonth": "2022-02", "buyDate": "2022-02-28", "buyNAV": 1.138, "endNAV": 1.589, "shares": 1.0, "totalReturn": 39.63, "cagr": 8.01, "years": 4.33, "isProfit": true}, {"yearMonth": "2022-03", "buyDate": "2022-03-31", "buyNAV": 1.027, "endNAV": 1.589, "shares": 1.0, "totalReturn": 54.72, "cagr": 10.82, "years": 4.25, "isProfit": true}, {"yearMonth": "2022-04", "buyDate": "2022-04-29", "buyNAV": 0.957, "endNAV": 1.589, "shares": 1.0, "totalReturn": 66.04, "cagr": 12.93, "years": 4.17, "isProfit": true}, {"yearMonth": "2022-05", "buyDate": "2022-05-31", "buyNAV": 1.044, "endNAV": 1.589, "shares": 1.0, "totalReturn": 52.2, "cagr": 10.84, "years": 4.08, "isProfit": true}, {"yearMonth": "2022-06", "buyDate": "2022-06-30", "buyNAV": 1.223, "endNAV": 1.589, "shares": 1.0, "totalReturn": 29.93, "cagr": 6.76, "years": 4.0, "isProfit": true}, {"yearMonth": "2022-07", "buyDate": "2022-07-29", "buyNAV": 1.22, "endNAV": 1.589, "shares": 1.0, "totalReturn": 30.25, "cagr": 6.97, "years": 3.92, "isProfit": true}, {"yearMonth": "2022-08", "buyDate": "2022-08-31", "buyNAV": 1.176, "endNAV": 1.589, "shares": 1.0, "totalReturn": 35.12, "cagr": 8.18, "years": 3.83, "isProfit": true}, {"yearMonth": "2022-09", "buyDate": "2022-09-30", "buyNAV": 1.101, "endNAV": 1.589, "shares": 1.0, "totalReturn": 44.32, "cagr": 10.28, "years": 3.75, "isProfit": true}, {"yearMonth": "2022-10", "buyDate": "2022-10-31", "buyNAV": 1.063, "endNAV": 1.589, "shares": 1.0, "totalReturn": 49.48, "cagr": 11.6, "years": 3.66, "isProfit": true}, {"yearMonth": "2022-11", "buyDate": "2022-11-30", "buyNAV": 1.03, "endNAV": 1.589, "shares": 1.0, "totalReturn": 54.27, "cagr": 12.87, "years": 3.58, "isProfit": true}, {"yearMonth": "2022-12", "buyDate": "2022-12-31", "buyNAV": 0.981, "endNAV": 1.589, "shares": 1.0, "totalReturn": 61.98, "cagr": 14.79, "years": 3.5, "isProfit": true}, {"yearMonth": "2023-01", "buyDate": "2023-01-31", "buyNAV": 1.045, "endNAV": 1.589, "shares": 1.0, "totalReturn": 52.06, "cagr": 13.07, "years": 3.41, "isProfit": true}, {"yearMonth": "2023-02", "buyDate": "2023-02-28", "buyNAV": 1.006, "endNAV": 1.589, "shares": 1.0, "totalReturn": 57.95, "cagr": 14.69, "years": 3.33, "isProfit": true}, {"yearMonth": "2023-03", "buyDate": "2023-03-31", "buyNAV": 0.962, "endNAV": 1.589, "shares": 1.0, "totalReturn": 65.18, "cagr": 16.7, "years": 3.25, "isProfit": true}, {"yearMonth": "2023-04", "buyDate": "2023-04-28", "buyNAV": 0.938, "endNAV": 1.589, "shares": 1.0, "totalReturn": 69.4, "cagr": 18.07, "years": 3.17, "isProfit": true}, {"yearMonth": "2023-05", "buyDate": "2023-05-31", "buyNAV": 0.901, "endNAV": 1.589, "shares": 1.0, "totalReturn": 76.36, "cagr": 20.21, "years": 3.08, "isProfit": true}, {"yearMonth": "2023-06", "buyDate": "2023-06-30", "buyNAV": 0.933, "endNAV": 1.589, "shares": 1.0, "totalReturn": 70.31, "cagr": 19.42, "years": 3.0, "isProfit": true}, {"yearMonth": "2023-07", "buyDate": "2023-07-31", "buyNAV": 0.904, "endNAV": 1.589, "shares": 1.0, "totalReturn": 75.77, "cagr": 21.34, "years": 2.92, "isProfit": true}, {"yearMonth": "2023-08", "buyDate": "2023-08-31", "buyNAV": 0.844, "endNAV": 1.589, "shares": 1.0, "totalReturn": 88.27, "cagr": 25.04, "years": 2.83, "isProfit": true}, {"yearMonth": "2023-09", "buyDate": "2023-09-28", "buyNAV": 0.798, "endNAV": 1.589, "shares": 1.0, "totalReturn": 99.12, "cagr": 28.41, "years": 2.75, "isProfit": true}, {"yearMonth": "2023-10", "buyDate": "2023-10-31", "buyNAV": 0.798, "endNAV": 1.589, "shares": 1.0, "totalReturn": 99.12, "cagr": 29.5, "years": 2.66, "isProfit": true}, {"yearMonth": "2023-11", "buyDate": "2023-11-30", "buyNAV": 0.787, "endNAV": 1.589, "shares": 1.0, "totalReturn": 101.91, "cagr": 31.28, "years": 2.58, "isProfit": true}, {"yearMonth": "2023-12", "buyDate": "2023-12-31", "buyNAV": 0.78, "endNAV": 1.589, "shares": 1.0, "totalReturn": 103.72, "cagr": 32.97, "years": 2.5, "isProfit": true}, {"yearMonth": "2024-01", "buyDate": "2024-01-31", "buyNAV": 0.633, "endNAV": 1.589, "shares": 1.0, "totalReturn": 151.03, "cagr": 46.46, "years": 2.41, "isProfit": true}, {"yearMonth": "2024-02", "buyDate": "2024-02-29", "buyNAV": 0.717, "endNAV": 1.589, "shares": 1.0, "totalReturn": 121.62, "cagr": 40.66, "years": 2.33, "isProfit": true}, {"yearMonth": "2024-03", "buyDate": "2024-03-29", "buyNAV": 0.736, "endNAV": 1.589, "shares": 1.0, "totalReturn": 115.9, "cagr": 40.71, "years": 2.25, "isProfit": true}, {"yearMonth": "2024-04", "buyDate": "2024-04-30", "buyNAV": 0.74, "endNAV": 1.589, "shares": 1.0, "totalReturn": 114.73, "cagr": 42.32, "years": 2.17, "isProfit": true}, {"yearMonth": "2024-05", "buyDate": "2024-05-31", "buyNAV": 0.723, "endNAV": 1.589, "shares": 1.0, "totalReturn": 119.78, "cagr": 46.0, "years": 2.08, "isProfit": true}, {"yearMonth": "2024-06", "buyDate": "2024-06-30", "buyNAV": 0.7, "endNAV": 1.589, "shares": 1.0, "totalReturn": 127.0, "cagr": 50.71, "years": 2.0, "isProfit": true}, {"yearMonth": "2024-07", "buyDate": "2024-07-31", "buyNAV": 0.73, "endNAV": 1.589, "shares": 1.0, "totalReturn": 117.67, "cagr": 50.15, "years": 1.91, "isProfit": true}, {"yearMonth": "2024-08", "buyDate": "2024-08-30", "buyNAV": 0.697, "endNAV": 1.589, "shares": 1.0, "totalReturn": 127.98, "cagr": 56.82, "years": 1.83, "isProfit": true}, {"yearMonth": "2024-09", "buyDate": "2024-09-30", "buyNAV": 0.852, "endNAV": 1.589, "shares": 1.0, "totalReturn": 86.5, "cagr": 42.88, "years": 1.75, "isProfit": true}, {"yearMonth": "2024-10", "buyDate": "2024-10-31", "buyNAV": 0.868, "endNAV": 1.589, "shares": 1.0, "totalReturn": 83.06, "cagr": 43.89, "years": 1.66, "isProfit": true}, {"yearMonth": "2024-11", "buyDate": "2024-11-29", "buyNAV": 0.863, "endNAV": 1.589, "shares": 1.0, "totalReturn": 84.13, "cagr": 47.07, "years": 1.58, "isProfit": true}, {"yearMonth": "2024-12", "buyDate": "2024-12-31", "buyNAV": 0.855, "endNAV": 1.589, "shares": 1.0, "totalReturn": 85.85, "cagr": 51.38, "years": 1.49, "isProfit": true}, {"yearMonth": "2025-01", "buyDate": "2025-01-27", "buyNAV": 0.838, "endNAV": 1.589, "shares": 1.0, "totalReturn": 89.62, "cagr": 56.88, "years": 1.42, "isProfit": true}, {"yearMonth": "2025-02", "buyDate": "2025-02-28", "buyNAV": 0.89, "endNAV": 1.589, "shares": 1.0, "totalReturn": 78.54, "cagr": 54.45, "years": 1.33, "isProfit": true}, {"yearMonth": "2025-03", "buyDate": "2025-03-31", "buyNAV": 0.845, "endNAV": 1.589, "shares": 1.0, "totalReturn": 88.05, "cagr": 65.84, "years": 1.25, "isProfit": true}, {"yearMonth": "2025-04", "buyDate": "2025-04-30", "buyNAV": 0.808, "endNAV": 1.589, "shares": 1.0, "totalReturn": 96.66, "cagr": 78.58, "years": 1.17, "isProfit": true}, {"yearMonth": "2025-05", "buyDate": "2025-05-30", "buyNAV": 0.783, "endNAV": 1.589, "shares": 1.0, "totalReturn": 102.94, "cagr": 92.09, "years": 1.08, "isProfit": true}, {"yearMonth": "2025-06", "buyDate": "2025-06-30", "buyNAV": 0.808, "endNAV": 1.589, "shares": 1.0, "totalReturn": 96.66, "cagr": 96.75, "years": 1.0, "isProfit": true}, {"yearMonth": "2025-07", "buyDate": "2025-07-31", "buyNAV": 0.83, "endNAV": 1.589, "shares": 1.0, "totalReturn": 91.45, "cagr": 103.44, "years": 0.91, "isProfit": true}, {"yearMonth": "2025-08", "buyDate": "2025-08-29", "buyNAV": 0.993, "endNAV": 1.589, "shares": 1.0, "totalReturn": 60.02, "cagr": 75.59, "years": 0.84, "isProfit": true}, {"yearMonth": "2025-09", "buyDate": "2025-09-30", "buyNAV": 1.115, "endNAV": 1.589, "shares": 1.0, "totalReturn": 42.51, "cagr": 60.63, "years": 0.75, "isProfit": true}, {"yearMonth": "2025-10", "buyDate": "2025-10-31", "buyNAV": 1.055, "endNAV": 1.589, "shares": 1.0, "totalReturn": 50.62, "cagr": 85.55, "years": 0.66, "isProfit": true}, {"yearMonth": "2025-11", "buyDate": "2025-11-28", "buyNAV": 1.004, "endNAV": 1.589, "shares": 1.0, "totalReturn": 58.27, "cagr": 118.93, "years": 0.59, "isProfit": true}, {"yearMonth": "2025-12", "buyDate": "2025-12-31", "buyNAV": 1.036, "endNAV": 1.589, "shares": 1.0, "totalReturn": 53.38, "cagr": 137.06, "years": 0.5, "isProfit": true}, {"yearMonth": "2026-01", "buyDate": "2026-01-30", "buyNAV": 1.127, "endNAV": 1.589, "shares": 1.0, "totalReturn": 40.99, "cagr": 129.56, "years": 0.41, "isProfit": true}, {"yearMonth": "2026-02", "buyDate": "2026-02-27", "buyNAV": 1.114, "endNAV": 1.589, "shares": 1.0, "totalReturn": 42.64, "cagr": 187.09, "years": 0.34, "isProfit": true}, {"yearMonth": "2026-03", "buyDate": "2026-03-31", "buyNAV": 1.035, "endNAV": 1.589, "shares": 1.0, "totalReturn": 53.53, "cagr": 458.85, "years": 0.25, "isProfit": true}, {"yearMonth": "2026-04", "buyDate": "2026-04-30", "buyNAV": 1.263, "endNAV": 1.589, "shares": 1.0, "totalReturn": 25.81, "cagr": 295.46, "years": 0.17, "isProfit": true}, {"yearMonth": "2026-05", "buyDate": "2026-05-29", "buyNAV": 1.366, "endNAV": 1.589, "shares": 1.0, "totalReturn": 16.33, "cagr": 461.82, "years": 0.09, "isProfit": true}, {"yearMonth": "2026-06", "buyDate": "2026-06-30", "buyNAV": 1.589, "endNAV": 1.589, "shares": 1.0, "totalReturn": 0.0, "cagr": 0.0, "years": 0.0, "isProfit": false}]};
+        
+        const results = BACKTEST_DATA.results;
+        document.getElementById('totalCount').textContent = results.length;
+        
+        // Helper: get return class
+        function getReturnClass(pct) {
+            if (pct >= 200) return 'return-high';
+            if (pct >= 100) return 'return-mid';
+            if (pct >= 0) return 'return-low';
+            return 'return-neg';
+        }
+        
+        // Helper: get rank class
+        function getRankClass(idx) {
+            if (idx === 0) return 'rank-gold';
+            if (idx === 1) return 'rank-silver';
+            if (idx === 2) return 'rank-bronze';
+            return 'rank-normal';
+        }
+        
+        // Stats
+        const totalMonths = results.length;
+        const profitMonths = results.filter(r => r.isProfit).length;
+        const profitPct = ((profitMonths / totalMonths) * 100).toFixed(1);
+        const best = [...results].sort((a, b) => b.totalReturn - a.totalReturn)[0];
+        const worst = [...results].sort((a, b) => a.totalReturn - b.totalReturn)[0];
+        const avgReturn = (results.reduce((s, r) => s + r.totalReturn, 0) / totalMonths).toFixed(2);
+        const avgCagr = (results.reduce((s, r) => s + r.cagr, 0) / totalMonths).toFixed(2);
+        
+        document.getElementById('statsGrid').innerHTML = `
+            <div class="stat-card">
+                <div class="label">📅 回测月份数</div>
+                <div class="value" style="color: var(--accent);">${totalMonths}</div>
+                <div class="sub">2010.12 — 2026.06</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">✅ 盈利月份比例</div>
+                <div class="value positive">${profitPct}%</div>
+                <div class="sub">${profitMonths}/${totalMonths} 个月盈利</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">📈 平均累计收益率</div>
+                <div class="value positive">${avgReturn}%</div>
+                <div class="sub">含分红再投资</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">📊 平均年化收益率</div>
+                <div class="value positive">${avgCagr}%</div>
+                <div class="sub">CAGR 复合年化</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">🏆 最佳买入</div>
+                <div class="value positive">${best.totalReturn}%</div>
+                <div class="sub">${best.yearMonth} · 年化${best.cagr}%</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">📉 最差买入</div>
+                <div class="value" style="color: ${worst.totalReturn >= 0 ? '#10b981' : '#ef4444'};">${worst.totalReturn}%</div>
+                <div class="sub">${worst.yearMonth} · 年化${worst.cagr}%</div>
+            </div>
+        `;
+        
+        // Main return chart
+        const chartDom = document.getElementById('returnChart');
+        const myChart = echarts.init(chartDom);
+        
+        const buyDates = results.map(r => r.yearMonth);
+        const returns = results.map(r => r.totalReturn);
+        const cagrs = results.map(r => r.cagr);
+        
+        // Color: green for profit, red for loss
+        const colors = returns.map(v => v >= 0 ? '#10b981' : '#ef4444');
+        
+        const option = {
+            backgroundColor: 'transparent',
+            tooltip: {
+                trigger: 'axis',
+                backgroundColor: 'rgba(30,41,59,0.95)',
+                borderColor: '#334155',
+                textStyle: { color: '#f1f5f9', fontSize: 13 },
+                formatter: function(params) {
+                    const p = params[0];
+                    const idx = p.dataIndex;
+                    const r = results[idx];
+                    return `<strong>${r.yearMonth}</strong><br/>
+                    买入净值：${r.buyNAV}<br/>
+                    累计收益：<span style="color:${r.totalReturn>=0?'#34d399':'#f87171'}">${r.totalReturn}%</span><br/>
+                    年化收益：${r.cagr}%<br/>
+                    持有年限：${r.years}年`;
+                }
+            },
+            grid: {
+                left: 80,
+                right: 60,
+                top: 30,
+                bottom: 60
+            },
+            xAxis: {
+                type: 'category',
+                data: buyDates,
+                axisLabel: {
+                    color: '#94a3b8',
+                    fontSize: 11,
+                    interval: 11,
+                    rotate: 30
+                },
+                axisLine: { lineStyle: { color: '#334155' } },
+                axisTick: { show: false }
+            },
+            yAxis: [
+                {
+                    type: 'value',
+                    name: '累计收益率 (%)',
+                    nameTextStyle: { color: '#94a3b8', fontSize: 12 },
+                    axisLabel: {
+                        color: '#94a3b8',
+                        fontSize: 11,
+                        formatter: '{value}%'
+                    },
+                    splitLine: { lineStyle: { color: '#1e293b' } },
+                    axisLine: { lineStyle: { color: '#334155' } }
+                }
+            ],
+            series: [
+                {
+                    name: '累计收益率',
+                    type: 'bar',
+                    data: returns.map((v, i) => ({
+                        value: v,
+                        itemStyle: {
+                            color: colors[i],
+                            borderRadius: [3, 3, 0, 0]
+                        }
+                    })),
+                    emphasis: {
+                        itemStyle: { opacity: 0.8 }
+                    }
+                },
+                {
+                    name: '年化收益率',
+                    type: 'line',
+                    yAxisIndex: 0,
+                    data: cagrs,
+                    symbol: 'none',
+                    lineStyle: {
+                        color: '#fbbf24',
+                        width: 2,
+                        type: 'dashed'
+                    },
+                    itemStyle: { color: '#fbbf24' }
+                }
+            ]
+        };
+        
+        myChart.setOption(option);
+        
+        window.addEventListener('resize', () => myChart.resize());
+        
+        // Top 10 & Bottom 10
+        const sorted = [...results].sort((a, b) => b.totalReturn - a.totalReturn);
+        const top10 = sorted.slice(0, 10);
+        const bottom10 = sorted.slice(-10).reverse();
+        
+        function renderRankList(containerId, items, isBest) {
+            const el = document.getElementById(containerId);
+            el.innerHTML = items.map((r, i) => `
+                <li>
+                    <span class="rank-item-left">
+                        <span class="rank-num ${getRankClass(isBest ? i : (9-i))}">${isBest ? i+1 : 10-i}</span>
+                        <span>${r.yearMonth}</span>
+                        <span style="color: var(--text-secondary); font-size: 0.8rem;">净值${r.buyNAV}</span>
+                    </span>
+                    <span>
+                        <span class="${r.totalReturn >= 0 ? 'positive' : 'negative'}" style="font-weight: 600;">${r.totalReturn}%</span>
+                        <span style="color: var(--text-secondary); font-size: 0.8rem; margin-left: 8px;">年化${r.cagr}%</span>
+                    </span>
+                </li>
+            `).join('');
+        }
+        
+        renderRankList('top10List', top10, true);
+        renderRankList('bottom10List', bottom10, false);
+        
+        // Table
+        function renderTable(filterText = '') {
+            const tbody = document.getElementById('tableBody');
+            let filtered = results;
+            if (filterText) {
+                const lower = filterText.toLowerCase();
+                filtered = results.filter(r =>
+                    r.yearMonth.includes(lower) ||
+                    String(r.buyNAV).includes(lower) ||
+                    String(r.totalReturn).includes(lower)
+                );
+            }
+            
+            // Group by year
+            const groups = {};
+            filtered.forEach(r => {
+                const year = r.yearMonth.slice(0, 4);
+                if (!groups[year]) groups[year] = [];
+                groups[year].push(r);
+            });
+            
+            let rows = '';
+            for (const year of Object.keys(groups).sort()) {
+                const months = groups[year].sort((a, b) => parseInt(a.yearMonth.slice(5)) - parseInt(b.yearMonth.slice(5)));
+                
+                months.forEach((r, mi) => {
+                    const monthNum = r.yearMonth.slice(5);
+                    const returnClass = getReturnClass(r.totalReturn);
+                    rows += `
+                        <tr>
+                            <td>${mi === 0 ? year : ''}</td>
+                            <td>${monthNum}月</td>
+                            <td>${r.buyDate}</td>
+                            <td>${r.buyNAV}</td>
+                            <td>${r.shares.toFixed(4)}</td>
+                            <td><span class="return-badge ${returnClass}">${r.totalReturn}%</span></td>
+                            <td style="color:${r.cagr>=0?'#34d399':'#f87171'};font-weight:600;">${r.cagr}%</td>
+                            <td>${r.years}年</td>
+                        </tr>
+                    `;
+                });
+            }
+            
+            tbody.innerHTML = rows;
+        }
+        
+        renderTable();
+        
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            renderTable(e.target.value);
+        });
+    </script>
+</body>
+</html>
