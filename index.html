@@ -313,6 +313,88 @@ footer p { margin:2px 0; }
 </div>
 
 <script>
+// ============ CORS 代理（绕过跨域限制） ============
+function proxyFetch(url,timeoutMs){
+  timeoutMs=timeoutMs||20000;
+  return fetch('https://api.allorigins.win/raw?url='+encodeURIComponent(url),{signal:AbortSignal.timeout(timeoutMs)})
+    .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.text();});
+}
+
+// 获取基金名称
+function fetchFundName(code){
+  return proxyFetch('http://fundgz.1234567.com.cn/js/'+code+'.js?rt='+Date.now())
+    .then(function(t){var m=t.match(/jsonpgz\((.+)\)/);if(m){var d=JSON.parse(m[1]);return d.name||'';}return '';})
+    .catch(function(){return '';});
+}
+
+// 获取历史净值（分页）
+function fetchNavData(code){
+  return new Promise(function(resolve,reject){
+    var allData=[];
+    function fetchPage(page){
+      var url='http://api.fund.eastmoney.com/f10/lsjz?callback=&fundCode='+code+'&pageIndex='+page+'&pageSize=20&startDate=2010-01-01&endDate=2026-12-31';
+      proxyFetch(url).then(function(raw){debugger
+        var data=JSON.parse(raw);
+        if(data.ErrCode!==0){reject(new Error(data.ErrMsg||'API错误'));return;}
+        var items=(data.Data&&data.Data.LSJZList)||[];
+        allData=allData.concat(items);
+        var tp=Math.ceil((data.TotalCount||0)/20);
+        var done=page>=tp||items.length===0;
+        updateLoading('拉取历史净值...',page+'/'+tp+' 页 ('+allData.length+' 条)');
+        if(done){
+          allData.sort(function(a,b){return a.FSRQ.localeCompare(b.FSRQ);});
+          resolve(allData.map(function(d){return {date:d.FSRQ,dwjz:parseFloat(d.DWJZ),ljjz:parseFloat(d.LJJZ)};}));
+        }else{setTimeout(function(){fetchPage(page+1);},80);}
+      }).catch(reject);
+    }
+    fetchPage(1);
+  });
+}
+
+// 获取分红记录
+function fetchDividends(code){
+  var url='http://api.fund.eastmoney.com/f10/fhsp?callback=&fundCode='+code+'&pageIndex=1&pageSize=50';
+  return proxyFetch(url).then(function(raw){debugger
+    var data=JSON.parse(raw);
+    var items=(data.Data&&data.Data.list)||[];
+    return items.map(function(d){return {date:String(d.EXDIVIDEND||'').slice(0,10),perShare:parseFloat(d.PERUNITVAL)||0};})
+      .filter(function(d){return d.date&&d.perShare;})
+      .sort(function(a,b){return a.date.localeCompare(b.date);});
+  }).catch(function(){return [];});
+}
+
+// ============ 回测引擎（JS版） ============
+function computeBacktest(navs,dividends){
+  var dateNav={};for(var i=0;i<navs.length;i++)dateNav[navs[i].date]=navs[i].dwjz;
+  var dates=navs.map(function(n){return n.date;}).sort();
+  var monthly={};for(var j=0;j<dates.length;j++){var ym=dates[j].slice(0,7);monthly[ym]={date:dates[j],nav:dateNav[dates[j]]};}
+  var divMap={};for(var k=0;k<dividends.length;k++)divMap[dividends[k].date]=dividends[k].perShare;
+  if(dates.length){monthly[dates[0].slice(0,7)]={date:dates[0],nav:1.0};}
+  var endNav=dateNav[dates[dates.length-1]],endDate=dates[dates.length-1];
+  var mons=Object.keys(monthly).sort(),results=[];
+  for(var n=0;n<mons.length;n++){
+    var ym=mons[n],buy=monthly[ym];
+    var shares=1,details=[],divKeys=Object.keys(divMap).sort();
+    for(var p=0;p<divKeys.length;p++){
+      var dd=divKeys[p],dps=divMap[dd];
+      if(buy.date<=dd){
+        var rn=null;for(var q=0;q<dates.length;q++){if(dates[q]>=dd){rn=dateNav[dates[q]];break;}}
+        if(!rn)continue;
+        var cash=shares*dps,add=cash/rn,old=shares;shares+=add;
+        details.push({date:dd,perShare:dps,sharesBefore:Math.round(old*1e6)/1e6,cashDividend:Math.round(cash*1e4)/1e4,reinvestNAV:Math.round(rn*1e4)/1e4,newShares:Math.round(add*1e6)/1e6,sharesAfter:Math.round(shares*1e6)/1e6});
+      }
+    }
+    var fv=shares*endNav,tr=((fv-buy.nav)/buy.nav)*100;
+    var bd=new Date(buy.date),ed=new Date(endDate);
+    var yrs=Math.max((ed-bd)/86400000/365.25,.01);
+    var cg=yrs>0&&fv>0?((Math.pow(fv/buy.nav,1/yrs)-1)*100):0;
+    results.push({yearMonth:ym,buyDate:buy.date,buyNAV:Math.round(buy.nav*1e4)/1e4,endNAV:Math.round(endNav*1e4)/1e4,shares:Math.round(shares*1e6)/1e6,totalReturn:Math.round(tr*100)/100,cagr:Math.round(cg*100)/100,years:Math.round(yrs*100)/100,isProfit:tr>0,dividendDetails:details,dividendCount:details.length});
+  }
+  var pc=0,sr=0,sc=0;for(var r=0;r<results.length;r++){if(results[r].isProfit)pc++;sr+=results[r].totalReturn;sc+=results[r].cagr;}
+  var best=results[0],worst=results[0];for(var s=1;s<results.length;s++){if(results[s].totalReturn>best.totalReturn)best=results[s];if(results[s].totalReturn<worst.totalReturn)worst=results[s];}
+  return {results:results,navCount:navs.length,dividendCount:dividends.length,dataRange:{from:dates[0]||'',to:dates[dates.length-1]||''},endDate:endDate,endNAV:Math.round(endNav*1e4)/1e4,summary:{totalMonths:results.length,profitMonths:pc,profitRatio:Math.round(pc/Math.max(results.length,1)*1000)/10,avgTotalReturn:Math.round(sr/Math.max(results.length,1)*100)/100,avgCAGR:Math.round(sc/Math.max(results.length,1)*100)/100,bestEntry:best,worstEntry:worst,dividendCount:dividends.length}};
+}
+
 var backtestData=null,currentFund=null,currentSortKey=null,currentSortDir='desc';
 var currentTheme='light';
 
@@ -340,12 +422,7 @@ function quickSearch(c){document.getElementById('fundCodeInput').value=c;startBa
 async function refreshCurrentFund(){
   var c=document.getElementById('fundCodeInput').value.trim();
   if(!c||c.length!==6){showError('请先输入基金代码再刷新');return;}
-  var btn=document.getElementById('searchBtn');
-  btn.disabled=true;btn.textContent='刷新中...';
-  try{
-    var r=await fetch('/api/refresh_cache?code='+c),d=await r.json();
-    if(d.success){startBacktest();}else{showError(d.error);btn.disabled=false;btn.textContent='开始回测';}
-  }catch(e){showError('刷新失败');btn.disabled=false;btn.textContent='开始回测';}
+  startBacktest();
 }
 
 async function startBacktest(){
@@ -354,14 +431,22 @@ async function startBacktest(){
   hideError();hideResult();showLoading('正在查询基金信息...','');
   var btn=document.getElementById('searchBtn');btn.disabled=true;btn.textContent='计算中...';
   try{
-    updateLoading('正在拉取历史净值数据...','从天天基金网API获取，首次查询较慢');
-    var r=await fetch('/api/backtest?code='+c),d=await r.json();
-    if(!d.success){showError(d.error||'回测失败');return;}
-    backtestData=d;currentFund=d.fund;
+    updateLoading('正在获取基金名称...','');
+    var name=await fetchFundName(c);
+    updateLoading('正在拉取历史净值...','数据量大请耐心等待');
+    var navs=await fetchNavData(c);
+    if(!navs||navs.length===0){showError('未获取到净值数据，请检查基金代码');btn.disabled=false;btn.textContent='开始回测';return;}
+    updateLoading('正在获取分红记录...','');
+    var dividends=await fetchDividends(c);
+    updateLoading('正在计算回测...','');
+    var res=computeBacktest(navs,dividends);
+    backtestData=res;
+    currentFund={code:c,name:name||('基金'+c),fullName:name||'',type:''};
     renderFundInfo();renderStats();renderTop10();renderTable();
     hideLoading();showResult();
-  }catch(e){showError('请求失败: '+e.message);}
-  finally{btn.disabled=false;btn.textContent='开始回测';}
+    window.scrollTo({top:document.getElementById('resultArea').offsetTop-20,behavior:'smooth'});
+  }catch(e){showError('请求失败: '+e.message);console.error(e);}
+  btn.disabled=false;btn.textContent='开始回测';
 }
 document.getElementById('fundCodeInput').addEventListener('keydown',function(e){if(e.key==='Enter')startBacktest();});
 
