@@ -333,7 +333,7 @@ function fetchNavData(code){
     var allData=[];
     function fetchPage(page){
       var url='http://api.fund.eastmoney.com/f10/lsjz?callback=&fundCode='+code+'&pageIndex='+page+'&pageSize=20&startDate=2010-01-01&endDate=2026-12-31';
-      proxyFetch(url).then(function(raw){debugger
+      proxyFetch(url).then(function(raw){
         var data=JSON.parse(raw);
         if(data.ErrCode!==0){reject(new Error(data.ErrMsg||'API错误'));return;}
         var items=(data.Data&&data.Data.LSJZList)||[];
@@ -354,7 +354,7 @@ function fetchNavData(code){
 // 获取分红记录
 function fetchDividends(code){
   var url='http://api.fund.eastmoney.com/f10/fhsp?callback=&fundCode='+code+'&pageIndex=1&pageSize=50';
-  return proxyFetch(url).then(function(raw){debugger
+  return proxyFetch(url).then(function(raw){
     var data=JSON.parse(raw);
     var items=(data.Data&&data.Data.list)||[];
     return items.map(function(d){return {date:String(d.EXDIVIDEND||'').slice(0,10),perShare:parseFloat(d.PERUNITVAL)||0};})
